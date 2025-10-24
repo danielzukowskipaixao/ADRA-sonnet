@@ -110,5 +110,21 @@ export const adminApi = {
   },
   exportRequests() {
     return fetch(`${API}/requests/export.csv`, { credentials: 'include' }).then(r => r.text());
+  },
+  // New: necessidades endpoints
+  necessidades(params = {}) {
+    const q = new URLSearchParams(params).toString();
+    return fetch(`${API}/necessidades?${q}`, { credentials: 'include' }).then(json);
+  },
+  patchNecessidade(id, body) {
+    return fetch(`${API}/necessidades/${encodeURIComponent(id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' }).then(json);
+  },
+  exportNecessidades(params = {}) {
+    const q = new URLSearchParams(params).toString();
+    const url = q ? `${API}/necessidades/export.csv?${q}` : `${API}/necessidades/export.csv`;
+    return fetch(url, { credentials: 'include' }).then(r => r.text());
+  },
+  auditOverview() {
+    return fetch(`${API}/audit/overview`, { credentials: 'include' }).then(json);
   }
 };

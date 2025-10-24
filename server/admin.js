@@ -1,9 +1,12 @@
 import express from 'express';
 import fs from 'fs/promises';
 import path from 'path';
+import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import emailService from './services/emailService.js';
+import { readJson as readJsonAtomic, writeJsonAtomic } from './lib/jsonStore.js';
+import { NecessidadeSchema, NecessidadesListResponse, NecessidadesPatchSchema, AuditOverviewSchema } from './contracts/schemas.js';
 
 // Load environment variables early to ensure ADMIN_PASSWORD and secrets are available
 dotenv.config();
@@ -32,22 +35,8 @@ async function ensureJson(filePath, fallback = '[]') {
   }
 }
 
-async function readJson(filePath) {
-  await ensureJson(filePath);
-  try {
-    const txt = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(txt || '[]');
-  } catch {
-    console.warn(`[admin] JSON inválido em ${filePath}. Resetando para []`);
-    await fs.writeFile(filePath, '[]', 'utf-8');
-    return [];
-  }
-}
-
-async function writeJson(filePath, data) {
-  await ensureJson(filePath);
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
-}
+async function readJson(filePath) { return readJsonAtomic(filePath); }
+async function writeJson(filePath, data) { return writeJsonAtomic(filePath, data); }
 
 // Minimal in-memory rate limit for login: 5 attempts per 5 minutes per IP
 const loginAttempts = new Map();
@@ -307,6 +296,207 @@ router.get('/donations/export.csv', async (req, res) => {
   res.send(csv);
 });
 
+// ----------------- NECESSIDADES (mapeadas a partir de requests) -----------------
+
+function sanitizeQueryString(q) {
+  const s = String(q || '').trim();
+  return s.length > 200 ? s.slice(0, 200) : s;
+}
+
+function mapRequestToNecessidades(reqObj) {
+  // reqObj: { id, contact, address, items[], createdAt, ... }
+  const createdAt = reqObj.createdAt || new Date().toISOString();
+  const updatedAt = reqObj.updatedAt || createdAt;
+  const addr = reqObj.address || {};
+  const contato = {
+    email: reqObj.contact?.email,
+    telefone: reqObj.contact?.phone,
+  };
+  const base = {
+    necessitadoId: String(reqObj.userId || reqObj.id || ''),
+    necessitadoNome: String(reqObj.contact?.name || '').trim() || 'Desconhecido',
+    necessitadoContato: contato,
+    enderecoEntrega: {
+      rua: addr.logradouro || addr.rua,
+      numero: addr.numero,
+      bairro: addr.bairro,
+      cidade: addr.cidade || addr.city,
+      uf: addr.uf || addr.state,
+      cep: addr.cep,
+      referencia: addr.referencia,
+      lat: reqObj.coordinates?.lat,
+      lng: reqObj.coordinates?.lng,
+    },
+    criadoEm: createdAt,
+    atualizadoEm: updatedAt,
+  };
+  const items = Array.isArray(reqObj.items) ? reqObj.items : [];
+  return items.map((it, idx) => {
+    const id = `${reqObj.id}#${idx}`;
+    const prioridade = (reqObj.urgency || '').toLowerCase();
+    const status = it?.admin?.status || 'pendente';
+    const observacaoInterna = it?.admin?.observacaoInterna || undefined;
+    const categoria = (it.category || '').toLowerCase();
+    const cat = ['alimento','higiene','vestuario','mobilia','outros'].includes(categoria) ? categoria : 'outros';
+    const necessidade = {
+      id,
+      ...base,
+      item: String(it.name || '').trim() || 'item',
+      categoria: cat,
+      prioridade: ['baixa','media','alta'].includes(prioridade) ? prioridade : 'media',
+      quantidade: it.quantity || it.qty || 1,
+      descricao: reqObj.description || it.notes || '',
+      status,
+      observacaoInterna,
+    };
+    return NecessidadeSchema.parse(necessidade);
+  });
+}
+
+router.get('/necessidades', async (req, res) => {
+  try {
+    const { query = '', status = '', prioridade = '', categoria = '', page = '1', pageSize = '20' } = req.query || {};
+    const q = sanitizeQueryString(query);
+    const p = Math.max(1, Number(page) || 1);
+    const ps = Math.min(100, Math.max(1, Number(pageSize) || 20));
+    const allReq = await readJson(requestsFile);
+    // flatten
+    let flat = allReq.flatMap(mapRequestToNecessidades);
+    // filters
+    if (status) flat = flat.filter(n => (n.status || '') === status);
+    if (prioridade) flat = flat.filter(n => (n.prioridade || '') === prioridade);
+    if (categoria) flat = flat.filter(n => (n.categoria || '') === categoria);
+    if (q) {
+      const qq = q.toLowerCase();
+      flat = flat.filter(n => [n.id, n.necessitadoNome, n.item, n.descricao, n.enderecoEntrega?.cidade, n.enderecoEntrega?.uf]
+        .map(x => (x || '').toString().toLowerCase()).join(' ').includes(qq));
+    }
+    const total = flat.length;
+    // sort default: prioridade (alta>media>baixa) then criadoEm desc
+    const prioRank = { alta: 3, media: 2, baixa: 1 };
+    flat.sort((a, b) => (prioRank[b.prioridade] - prioRank[a.prioridade]) || String(b.criadoEm).localeCompare(String(a.criadoEm)));
+    const items = flat.slice((p-1)*ps, (p-1)*ps + ps);
+    const payload = { items, total, page: p, pageSize: ps, pages: Math.ceil(total / ps) };
+    const parsed = NecessidadesListResponse.parse(payload);
+    return res.json(parsed);
+  } catch (e) {
+    console.error('[admin/necessidades] erro lista', e);
+    return res.status(500).json({ error: 'Erro ao listar necessidades' });
+  }
+});
+
+router.patch('/necessidades/:id', async (req, res) => {
+  try {
+    const patch = NecessidadesPatchSchema.parse(req.body || {});
+    const id = String(req.params.id);
+    const [reqId, idxStr] = id.split('#');
+    const idx = Number(idxStr);
+    if (!reqId || Number.isNaN(idx)) return res.status(400).json({ error: 'ID inválido' });
+    const allReq = await readJson(requestsFile);
+    const pos = allReq.findIndex(r => r.id === reqId);
+    if (pos === -1) return res.status(404).json({ error: 'Não encontrado' });
+    const reqObj = allReq[pos];
+    if (!Array.isArray(reqObj.items) || !reqObj.items[idx]) return res.status(404).json({ error: 'Item não encontrado' });
+    const now = new Date().toISOString();
+    reqObj.items[idx].admin = {
+      ...(reqObj.items[idx].admin || {}),
+      ...(patch.status ? { status: patch.status } : {}),
+      ...(patch.observacaoInterna ? { observacaoInterna: patch.observacaoInterna } : {}),
+      atualizadoEm: now,
+    };
+    reqObj.updatedAt = now;
+    allReq[pos] = reqObj;
+    await writeJson(requestsFile, allReq);
+    return res.json({ ok: true });
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Payload inválido' });
+    }
+    console.error('[admin/necessidades] erro patch', e);
+    return res.status(500).json({ error: 'Erro ao atualizar necessidade' });
+  }
+});
+
+router.get('/necessidades/export.csv', async (req, res) => {
+  try {
+    // reuse same filtering as list
+    const url = new URL(req.protocol + '://' + req.get('host') + req.originalUrl);
+    const params = Object.fromEntries(url.searchParams.entries());
+    const fakeReq = { query: params };
+    let list = [];
+    {
+      const { query = '', status = '', prioridade = '', categoria = '' } = params || {};
+      const q = sanitizeQueryString(query);
+      const allReq = await readJson(requestsFile);
+      list = allReq.flatMap(mapRequestToNecessidades);
+      if (status) list = list.filter(n => (n.status || '') === status);
+      if (prioridade) list = list.filter(n => (n.prioridade || '') === prioridade);
+      if (categoria) list = list.filter(n => (n.categoria || '') === categoria);
+      if (q) {
+        const qq = q.toLowerCase();
+        list = list.filter(n => [n.id, n.necessitadoNome, n.item, n.descricao, n.enderecoEntrega?.cidade, n.enderecoEntrega?.uf]
+          .map(x => (x || '').toString().toLowerCase()).join(' ').includes(qq));
+      }
+    }
+    const csv = toCSV(list, [
+      { label: 'ID', accessor: 'id' },
+      { label: 'Necessitado', accessor: 'necessitadoNome' },
+      { label: 'Item', accessor: 'item' },
+      { label: 'Categoria', accessor: 'categoria' },
+      { label: 'Prioridade', accessor: 'prioridade' },
+      { label: 'Quantidade', accessor: 'quantidade' },
+      { label: 'Cidade/UF', accessor: (n) => `${n.enderecoEntrega?.cidade||''}/${n.enderecoEntrega?.uf||''}` },
+      { label: 'Status', accessor: 'status' },
+      { label: 'Criado em', accessor: 'criadoEm' },
+    ]);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="necessidades.csv"');
+    res.send(csv);
+  } catch (e) {
+    console.error('[admin/necessidades] erro export', e);
+    res.status(500).send('Erro ao exportar CSV');
+  }
+});
+
+// ----------------- Auditoria -----------------
+router.get('/audit/overview', async (_req, res) => {
+  try {
+    const [beneficiaries, donations, requests] = await Promise.all([
+      readJson(beneficiariesFile),
+      readJson(donationsFile),
+      readJson(requestsFile),
+    ]);
+    const necessidades = requests.flatMap(mapRequestToNecessidades);
+    const violations = [];
+    // simple checks
+    for (const r of requests) {
+      if (!Array.isArray(r.items) || r.items.length === 0) {
+        violations.push({ tipo: 'registro_orfao', id: String(r.id), origemEsperada: 'necessidades', abaDetectada: 'nenhuma', motivo: 'Pedido sem itens' });
+      }
+      if (!r.contact?.name) {
+        violations.push({ tipo: 'campo_invalido', id: String(r.id), origemEsperada: 'necessidades', abaDetectada: 'necessidades', motivo: 'Pedido sem nome de contato' });
+      }
+    }
+    // beneficiaries pending validation
+    const pendencias = (beneficiaries || []).filter(b => (b.status || 'pending') === 'pending');
+    // Basic duplication check by id across tabs (illustrative)
+    const ids = new Set();
+    const markSeen = (id, origem) => {
+      if (ids.has(id)) violations.push({ tipo: 'aba_errada', id: String(id), origemEsperada: origem, abaDetectada: origem, motivo: 'ID duplicado em múltiplas coleções' });
+      ids.add(id);
+    };
+  pendencias.forEach(b => markSeen(`B:${b.id}`, 'validacoes'));
+  (donations||[]).forEach(d => markSeen(`D:${d.id}`, 'coletas'));
+  necessidades.forEach(n => markSeen(`N:${n.id}`, 'necessidades'));
+
+    const payload = { ok: violations.length === 0, counts: { pendenciasValidacao: pendencias.length, coletasEntregas: (donations||[]).length, necessidades: necessidades.length }, violations };
+    const parsed = AuditOverviewSchema.parse(payload);
+    res.json(parsed);
+  } catch (e) {
+    console.error('[admin/audit] erro overview', e);
+    res.status(500).json({ ok: false, counts: { pendenciasValidacao: 0, coletasEntregas: 0, necessidades: 0 }, violations: [{ tipo: 'erro_backend', id: '-', origemEsperada: '-', abaDetectada: '-', motivo: e.message||'erro' }] });
+  }
+});
 // New: Requests list for admin
 router.get('/requests', async (req, res) => {
   const { status = '', search = '', page = '1', pageSize = '20' } = req.query || {};
