@@ -218,6 +218,8 @@ const PaginaPedidoDoacao = () => {
     try {
       const requestData = {
         userId: user.id,
+        userEmail: user.email, // Adicionar email para ajudar na identificação
+        userName: user.nome, // Adicionar nome para usar como fallback
         address: coordinates ? { coordinates } : address,
         items: items.map(item => ({
           name: item.name.trim(),

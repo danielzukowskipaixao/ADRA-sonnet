@@ -1,11 +1,11 @@
 [
   {
     "id": "1761844182287-0-zj0l5e",
-    "userId": 3,
-    "necessitadoNome": "Usuário não identificado",
+    "userId": "1760635428923-qx9ncb",
+    "necessitadoNome": "Emanuel Prado",
     "necessitadoContato": {
-      "email": "",
-      "telefone": ""
+      "email": "emanuel@gmail.com",
+      "telefone": "17384973572"
     },
     "item": "Arroz",
     "categoria": "Alimentos",
@@ -33,6 +33,42 @@
       "urgency": "alta",
       "description": "sem alimento",
       "submittedAt": "2025-10-30T17:09:42.287Z"
+    }
+  },
+  {
+    "id": "1761846508118-0-220any",
+    "userId": 3,
+    "necessitadoNome": "Emanuel Prado",
+    "necessitadoContato": {
+      "email": "emanuel@gmail.com",
+      "telefone": "16384973425"
+    },
+    "item": "Mamão",
+    "categoria": "Alimentos",
+    "quantidade": 1000,
+    "unidade": "kg",
+    "descricao": "extra grande",
+    "prioridade": "urgente",
+    "enderecoEntrega": {
+      "tipo": "endereco",
+      "cep": "63547-839",
+      "logradouro": "Alagoinha",
+      "numero": "158",
+      "complemento": "",
+      "bairro": "FDP",
+      "cidade": "PQP",
+      "uf": "DF",
+      "endereco": "Alagoinha, 158, FDP"
+    },
+    "status": "pendente",
+    "observacaoInterna": "",
+    "criadoEm": "2025-10-30T17:48:28.118Z",
+    "atualizadoEm": "2025-10-30T17:48:28.118Z",
+    "termsAccepted": true,
+    "originalRequest": {
+      "urgency": "urgente",
+      "description": "estou morrendo",
+      "submittedAt": "2025-10-30T17:48:28.118Z"
     }
   }
 ]

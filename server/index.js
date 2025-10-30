@@ -228,6 +228,8 @@ app.post('/api/necessidades', async (req, res) => {
   try {
     const {
       userId,
+      userEmail,
+      userName,
       address,
       items,
       urgency,
@@ -243,17 +245,28 @@ app.post('/api/necessidades', async (req, res) => {
     }
     if (!termsAccepted) return res.status(400).json({ error: 'Aceite dos termos é obrigatório' });
 
-    // Buscar dados do usuário (se disponível)
-    let userName = 'Usuário não identificado';
-    let userEmail = '';
-    let userPhone = '';
+    // Buscar dados do usuário (priorizar dados enviados do frontend)
+    let finalUserName = userName || 'Usuário não identificado';
+    let finalUserEmail = userEmail || '';
+    let finalUserPhone = '';
+    
     try {
       const beneficiaries = await readBeneficiaries();
-      const user = beneficiaries.find(b => b.id === userId);
+      // Buscar primeiro por ID, depois por email como fallback
+      let user = beneficiaries.find(b => b.id === userId);
+      if (!user && userEmail) {
+        // Se não encontrou por ID, buscar por email enviado do frontend
+        user = beneficiaries.find(b => b.email && b.email.toLowerCase() === userEmail.toLowerCase());
+      }
+      if (!user && req.user && req.user.email) {
+        // Se ainda não encontrou, buscar por email do usuário logado
+        user = beneficiaries.find(b => b.email && b.email.toLowerCase() === req.user.email.toLowerCase());
+      }
+      
       if (user) {
-        userName = user.name || userName;
-        userEmail = user.email || '';
-        userPhone = user.phone || '';
+        finalUserName = user.name || finalUserName;
+        finalUserEmail = user.email || finalUserEmail;
+        finalUserPhone = user.phone || '';
       }
     } catch (e) {
       console.warn('Erro ao buscar dados do usuário:', e);
@@ -266,10 +279,10 @@ app.post('/api/necessidades', async (req, res) => {
     const newNecessidades = items.map((item, index) => ({
       id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
       userId,
-      necessitadoNome: userName,
+      necessitadoNome: finalUserName,
       necessitadoContato: {
-        email: userEmail,
-        telefone: userPhone
+        email: finalUserEmail,
+        telefone: finalUserPhone
       },
       item: item.name,
       categoria: item.category,

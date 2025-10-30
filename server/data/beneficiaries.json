@@ -222,7 +222,7 @@
     "id": "1760635428923-qx9ncb",
     "name": "Emanuel Prado",
     "email": "emanuel@gmail.com",
-    "phone": "17384973572",
+    "phone": "16384973425",
     "address": {
       "city": "",
       "state": ""
@@ -593,6 +593,24 @@
       },
       {
         "at": "2025-10-30T16:41:52.124Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T17:44:53.918Z",
+        "by": "system",
+        "action": "update",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T17:45:25.878Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T17:45:26.838Z",
         "by": "admin",
         "action": "validated",
         "details": ""
