@@ -4,6 +4,9 @@ import Button from '../components/Button';
 import { adminApi } from '../services/adminApi';
 import AdminLoginModal from '../components/AdminLoginModal';
 import Modal from '../components/Modal';
+import NecessidadesFilters from '../components/admin/NecessidadesFilters';
+import NecessidadesTable from '../components/admin/NecessidadesTable';
+import useAdminNecessidades from '../hooks/useAdminNecessidades';
 
 const TabButton = ({ active, children, ...props }) => (
   <button
@@ -79,15 +82,20 @@ export default function AdminDashboard() {
     { status: '', search: '', page: 1, pageSize: 20 },
     isAuthenticated
   );
+  
+  // Hook para necessidades
+  const necessidades = useAdminNecessidades({});
 
   const handleExport = async () => {
     const isBenef = tab === 'beneficiaries';
-    const csv = await (isBenef ? adminApi.exportBeneficiaries() : adminApi.exportDonations());
+    const isDon = tab === 'donations';
+    const isNec = tab === 'necessidades';
+    const csv = await (isBenef ? adminApi.exportBeneficiaries() : isDon ? adminApi.exportDonations() : necessidades.exportCsv());
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = isBenef ? 'beneficiarios.csv' : 'doacoes.csv';
+    a.download = isBenef ? 'beneficiarios.csv' : isDon ? 'doacoes.csv' : 'necessidades.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -146,26 +154,68 @@ export default function AdminDashboard() {
               <div className="flex gap-2">
                 <TabButton active={tab==='beneficiaries'} onClick={() => setTab('beneficiaries')}>Validações pendentes</TabButton>
                 <TabButton active={tab==='donations'} onClick={() => setTab('donations')}>Coletas/Entregas</TabButton>
+                <TabButton active={tab==='necessidades'} onClick={() => setTab('necessidades')}>Necessidades</TabButton>
               </div>
             </div>
           </header>
 
       <main className="container mx-auto px-4 py-6">
-        <div className="flex items-center gap-2 mb-4">
-          <input
-            className="border rounded-lg px-3 py-2 w-full max-w-sm"
-            placeholder={tab==='beneficiaries' ? 'Buscar beneficiários' : 'Buscar doações'}
-            value={(tab==='beneficiaries'?beneficiaries.params.search:donations.params.search) || ''}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (tab==='beneficiaries') beneficiaries.setParams({ ...beneficiaries.params, search: v, page: 1 });
-              else donations.setParams({ ...donations.params, search: v, page: 1 });
-            }}
-          />
-          <Button variant="secondary" onClick={handleExport}>Exportar CSV</Button>
-        </div>
+        {/* Verificando mapeamento de dados banner */}
+        {isAuthenticated && (
+          <div className="mb-4 rounded-lg p-3 text-sm bg-green-50 text-green-800" role="status" aria-live="polite">
+            Verificando mapeamento de dados...
+          </div>
+        )}
 
-        {tab === 'beneficiaries' ? (
+        {tab === 'necessidades' ? (
+          <>
+            <NecessidadesFilters
+              value={{ 
+                query: necessidades.filters.query, 
+                status: necessidades.filters.status, 
+                prioridade: necessidades.filters.prioridade, 
+                categoria: necessidades.filters.categoria 
+              }}
+              onChange={(f) => necessidades.setFilters({ ...necessidades.filters, ...f })}
+              onExport={async () => {
+                const csv = await necessidades.exportCsv();
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; 
+                a.download = 'necessidades.csv'; 
+                a.click(); 
+                URL.revokeObjectURL(url);
+              }}
+            />
+            {necessidades.error && <p className="text-red-600 mb-2">Falha ao buscar</p>}
+            <NecessidadesTable
+              items={necessidades.items}
+              total={necessidades.total}
+              page={necessidades.page}
+              pages={necessidades.pages}
+              onPrev={() => necessidades.setPage(Math.max(1, necessidades.page - 1))}
+              onNext={() => necessidades.setPage(Math.min(necessidades.pages, necessidades.page + 1))}
+              onUpdate={(id, patch) => necessidades.updateStatus(id, patch)}
+            />
+          </>
+        ) : (
+          <div className="flex items-center gap-2 mb-4">
+            <input
+              className="border rounded-lg px-3 py-2 w-full max-w-sm"
+              placeholder={tab==='beneficiaries' ? 'Buscar beneficiários' : 'Buscar doações'}
+              value={(tab==='beneficiaries'?beneficiaries.params.search:donations.params.search) || ''}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (tab==='beneficiaries') beneficiaries.setParams({ ...beneficiaries.params, search: v, page: 1 });
+                else donations.setParams({ ...donations.params, search: v, page: 1 });
+              }}
+            />
+            <Button variant="secondary" onClick={handleExport}>Exportar CSV</Button>
+          </div>
+        )}
+
+        {tab === 'beneficiaries' && tab !== 'necessidades' ? (
           <SectionTable
             loading={beneficiaries.loading}
             // Hide low-level 5xx/proxy errors and show a friendly empty state instead
@@ -191,7 +241,7 @@ export default function AdminDashboard() {
               </tr>
             )}
           />
-        ) : (
+        ) : tab === 'donations' ? (
           <SectionTable
             loading={donations.loading}
             error={donaErrorLooksLikeServerDown ? '' : donations.error}
@@ -216,7 +266,7 @@ export default function AdminDashboard() {
               </tr>
             )}
           />
-        )}
+        ) : null}
       </main>
 
       {/* Admin login modal - obrigatório para acesso */}
