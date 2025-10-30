@@ -222,12 +222,12 @@
     "id": "1760635428923-qx9ncb",
     "name": "Emanuel Prado",
     "email": "emanuel@gmail.com",
-    "phone": "37485925478",
+    "phone": "17384973572",
     "address": {
       "city": "",
       "state": ""
     },
-    "status": "pending",
+    "status": "validated",
     "createdAt": "2025-10-16T17:23:48.920Z",
     "notes": "",
     "history": [
@@ -523,6 +523,78 @@
         "at": "2025-10-30T14:11:55.540Z",
         "by": "system",
         "action": "update",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:36.012Z",
+        "by": "system",
+        "action": "update",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:50.581Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:50.748Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:50.908Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:51.060Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:51.228Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:51.364Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:51.516Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:51.667Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:51.812Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:51.964Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-10-30T16:41:52.124Z",
+        "by": "admin",
+        "action": "validated",
         "details": ""
       }
     ]
