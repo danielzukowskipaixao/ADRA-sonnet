@@ -40,5 +40,18 @@ export const adminApi = {
   },
   exportDonations() {
     return fetch(`${API}/donations/export.csv`, { credentials: 'include' }).then(r => r.text());
+  },
+  necessidades(params = {}) {
+    const q = new URLSearchParams(params).toString();
+    return fetch(`${API}/necessidades?${q}`, { credentials: 'include' }).then(json);
+  },
+  necessidade(id) {
+    return fetch(`${API}/necessidades/${id}`, { credentials: 'include' }).then(json);
+  },
+  updateNecessidade(id, body) {
+    return fetch(`${API}/necessidades/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' }).then(json);
+  },
+  exportNecessidades() {
+    return fetch(`${API}/necessidades/export.csv`, { credentials: 'include' }).then(r => r.text());
   }
 };

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "1761844182287-0-zj0l5e",
+    "userId": 3,
+    "necessitadoNome": "Usuário não identificado",
+    "necessitadoContato": {
+      "email": "",
+      "telefone": ""
+    },
+    "item": "Arroz",
+    "categoria": "Alimentos",
+    "quantidade": 1,
+    "unidade": "Kg",
+    "descricao": "inteiro",
+    "prioridade": "alta",
+    "enderecoEntrega": {
+      "tipo": "endereco",
+      "cep": "17283-946",
+      "logradouro": "Mario de Almeida",
+      "numero": "413",
+      "complemento": "",
+      "bairro": "rodovia",
+      "cidade": "Artur Nogueira",
+      "uf": "SP",
+      "endereco": "Mario de Almeida, 413, rodovia"
+    },
+    "status": "pendente",
+    "observacaoInterna": "",
+    "criadoEm": "2025-10-30T17:09:42.287Z",
+    "atualizadoEm": "2025-10-30T17:09:42.287Z",
+    "termsAccepted": true,
+    "originalRequest": {
+      "urgency": "alta",
+      "description": "sem alimento",
+      "submittedAt": "2025-10-30T17:09:42.287Z"
+    }
+  }
+]

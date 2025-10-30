@@ -216,7 +216,6 @@ const PaginaPedidoDoacao = () => {
     setIsSubmitting(true);
     
     try {
-      // MOCK: Simula envio para API
       const requestData = {
         userId: user.id,
         address: coordinates ? { coordinates } : address,
@@ -233,10 +232,24 @@ const PaginaPedidoDoacao = () => {
         submittedAt: new Date().toISOString()
       };
       
-      // Simula delay da API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('[PaginaPedidoDoacao] Enviando pedido:', requestData);
       
-      console.log('[PaginaPedidoDoacao] Pedido enviado:', requestData);
+      // Envia para API real
+      const response = await fetch('/api/necessidades', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Erro ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('[PaginaPedidoDoacao] Pedido enviado com sucesso:', result);
       
       // Sucesso
       setSubmitSuccess(true);
@@ -246,7 +259,7 @@ const PaginaPedidoDoacao = () => {
       
     } catch (error) {
       console.error('[PaginaPedidoDoacao] Erro ao enviar pedido:', error);
-      alert('Erro ao enviar pedido. Tente novamente.');
+      alert(`Erro ao enviar pedido: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }

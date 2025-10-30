@@ -20,6 +20,7 @@ const SESSION_EXPIRES_HOURS = 12; // 12h
 const dataDir = path.resolve(process.cwd(), 'server', 'data');
 const beneficiariesFile = path.join(dataDir, 'beneficiaries.json');
 const donationsFile = path.join(dataDir, 'donations.json');
+const necessidadesFile = path.join(dataDir, 'necessidades.json');
 
 async function ensureJson(filePath, fallback = '[]') {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -271,7 +272,128 @@ router.patch('/donations/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Necessidades list
+router.get('/necessidades', async (req, res) => {
+  const { status = '', prioridade = '', categoria = '', query = '', page = '1', pageSize = '20' } = req.query || {};
+  try {
+    const all = await readJson(necessidadesFile);
+    const filtered = all.filter(n => {
+      // Filtro por status
+      if (status && n.status !== status) return false;
+      
+      // Filtro por prioridade
+      if (prioridade && n.prioridade !== prioridade) return false;
+      
+      // Filtro por categoria
+      if (categoria && n.categoria !== categoria) return false;
+      
+      // Busca por texto
+      if (query) {
+        const q = String(query || '').toLowerCase();
+        const searchableText = [
+          n.necessitadoNome,
+          n.item,
+          n.descricao,
+          n.categoria,
+          n.enderecoEntrega?.cidade,
+          n.enderecoEntrega?.uf,
+          n.necessitadoContato?.email,
+          n.necessitadoContato?.telefone
+        ].map(x => (x || '').toLowerCase()).join(' ');
+        
+        if (!searchableText.includes(q)) return false;
+      }
+      
+      return true;
+    });
+    
+    // Ordenar por data de criação (mais recentes primeiro)
+    filtered.sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
+    
+    const result = paginate(filtered, page, pageSize);
+    res.json(result);
+  } catch (e) {
+    console.error('[admin] Falha ao listar necessidades, retornando vazio', e);
+    res.json(paginate([], page, pageSize));
+  }
+});
+
+router.get('/necessidades/:id', async (req, res) => {
+  try {
+    const all = await readJson(necessidadesFile);
+    const n = all.find(x => x.id === req.params.id);
+    if (!n) return res.status(404).json({ error: 'Necessidade não encontrada' });
+    res.json(n);
+  } catch (e) {
+    console.error('[admin] Erro ao buscar necessidade', e);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+router.patch('/necessidades/:id', async (req, res) => {
+  const { status, observacaoInterna } = req.body || {};
+  
+  try {
+    const all = await readJson(necessidadesFile);
+    const idx = all.findIndex(x => x.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Necessidade não encontrada' });
+    
+    const now = new Date().toISOString();
+    const updates = {};
+    
+    if (status) updates.status = status;
+    if (observacaoInterna !== undefined) updates.observacaoInterna = observacaoInterna;
+    if (Object.keys(updates).length > 0) updates.atualizadoEm = now;
+    
+    all[idx] = {
+      ...all[idx],
+      ...updates,
+      historicoStatus: [
+        ...(all[idx].historicoStatus || []),
+        status ? { 
+          at: now, 
+          by: 'admin', 
+          status, 
+          observacao: observacaoInterna || '' 
+        } : undefined
+      ].filter(Boolean)
+    };
+    
+    await writeJson(necessidadesFile, all);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[admin] Erro ao atualizar necessidade', e);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 // Export CSV
+router.get('/necessidades/export.csv', async (req, res) => {
+  try {
+    const all = await readJson(necessidadesFile);
+    const csv = toCSV(all, [
+      { label: 'Nome', accessor: 'necessitadoNome' },
+      { label: 'Item', accessor: 'item' },
+      { label: 'Prioridade', accessor: 'prioridade' },
+      { label: 'Quantidade', accessor: 'quantidade' },
+      { label: 'Categoria', accessor: 'categoria' },
+      { label: 'Local', accessor: (n) => `${n.enderecoEntrega?.cidade||''}/${n.enderecoEntrega?.uf||''}` },
+      { label: 'Status', accessor: 'status' },
+      { label: 'Descrição', accessor: 'descricao' },
+      { label: 'Email', accessor: (n) => n.necessitadoContato?.email || '' },
+      { label: 'Telefone', accessor: (n) => n.necessitadoContato?.telefone || '' },
+      { label: 'Criado em', accessor: 'criadoEm' },
+      { label: 'Observação Interna', accessor: 'observacaoInterna' }
+    ]);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="necessidades.csv"');
+    res.send(csv);
+  } catch (e) {
+    console.error('[admin] Erro ao exportar necessidades', e);
+    res.status(500).json({ error: 'Erro ao exportar' });
+  }
+});
+
 router.get('/beneficiaries/export.csv', async (req, res) => {
   const all = await readJson(beneficiariesFile);
   const csv = toCSV(all, [

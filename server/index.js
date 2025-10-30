@@ -26,6 +26,7 @@ app.use(cookieParser());
 const dataDir = path.resolve(process.cwd(), 'server', 'data');
 const schedulesFile = path.join(dataDir, 'schedules.json');
 const beneficiariesFile = path.join(dataDir, 'beneficiaries.json');
+const necessidadesFile = path.join(dataDir, 'necessidades.json');
 
 async function ensureDataFile() {
   try {
@@ -69,6 +70,28 @@ async function readBeneficiaries() {
 async function writeBeneficiaries(list) {
   await ensureBeneficiariesFile();
   await fs.writeFile(beneficiariesFile, JSON.stringify(list, null, 2), 'utf-8');
+}
+
+async function ensureNecessidadesFile() {
+  try {
+    await fs.mkdir(dataDir, { recursive: true });
+    await fs.access(necessidadesFile).catch(async () => {
+      await fs.writeFile(necessidadesFile, '[]', 'utf-8');
+    });
+  } catch (e) {
+    console.error('Erro ao preparar storage de necessidades', e);
+  }
+}
+
+async function readNecessidades() {
+  await ensureNecessidadesFile();
+  const txt = await fs.readFile(necessidadesFile, 'utf-8');
+  return JSON.parse(txt || '[]');
+}
+
+async function writeNecessidades(list) {
+  await ensureNecessidadesFile();
+  await fs.writeFile(necessidadesFile, JSON.stringify(list, null, 2), 'utf-8');
 }
 
 // Health
@@ -198,6 +221,101 @@ app.get('/api/beneficiaries/status', async (req, res) => {
 app.get('/users', async (_req, res) => {
   const users = await prisma.user.findMany({ orderBy: { id: 'asc' } });
   res.json(users.map(u => ({ id: u.id, name: u.name, email: u.email })));
+});
+
+// Create necessity request
+app.post('/api/necessidades', async (req, res) => {
+  try {
+    const {
+      userId,
+      address,
+      items,
+      urgency,
+      description,
+      termsAccepted
+    } = req.body || {};
+
+    // Validações
+    if (!userId) return res.status(400).json({ error: 'ID do usuário é obrigatório' });
+    if (!address) return res.status(400).json({ error: 'Endereço é obrigatório' });
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Lista de itens é obrigatória' });
+    }
+    if (!termsAccepted) return res.status(400).json({ error: 'Aceite dos termos é obrigatório' });
+
+    // Buscar dados do usuário (se disponível)
+    let userName = 'Usuário não identificado';
+    let userEmail = '';
+    let userPhone = '';
+    try {
+      const beneficiaries = await readBeneficiaries();
+      const user = beneficiaries.find(b => b.id === userId);
+      if (user) {
+        userName = user.name || userName;
+        userEmail = user.email || '';
+        userPhone = user.phone || '';
+      }
+    } catch (e) {
+      console.warn('Erro ao buscar dados do usuário:', e);
+    }
+
+    const necessidades = await readNecessidades();
+    const now = new Date().toISOString();
+    
+    // Criar um registro para cada item
+    const newNecessidades = items.map((item, index) => ({
+      id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+      userId,
+      necessitadoNome: userName,
+      necessitadoContato: {
+        email: userEmail,
+        telefone: userPhone
+      },
+      item: item.name,
+      categoria: item.category,
+      quantidade: item.quantity,
+      unidade: item.unit || 'unidade',
+      descricao: item.notes || description || '',
+      prioridade: urgency || 'media',
+      enderecoEntrega: address.coordinates ? {
+        tipo: 'coordenadas',
+        coordenadas: address.coordinates,
+        endereco: 'Localização via GPS'
+      } : {
+        tipo: 'endereco',
+        cep: address.cep,
+        logradouro: address.logradouro,
+        numero: address.numero,
+        complemento: address.complemento,
+        bairro: address.bairro,
+        cidade: address.cidade,
+        uf: address.uf,
+        endereco: `${address.logradouro}, ${address.numero}${address.complemento ? `, ${address.complemento}` : ''}, ${address.bairro}`
+      },
+      status: 'pendente',
+      observacaoInterna: '',
+      criadoEm: now,
+      atualizadoEm: now,
+      termsAccepted,
+      originalRequest: {
+        urgency,
+        description,
+        submittedAt: now
+      }
+    }));
+
+    necessidades.push(...newNecessidades);
+    await writeNecessidades(necessidades);
+
+    return res.status(201).json({ 
+      ok: true, 
+      count: newNecessidades.length,
+      ids: newNecessidades.map(n => n.id) 
+    });
+  } catch (e) {
+    console.error('Erro ao criar pedido de necessidades', e);
+    res.status(500).json({ error: 'Erro ao criar pedido' });
+  }
 });
 
 // Schedule pickup request

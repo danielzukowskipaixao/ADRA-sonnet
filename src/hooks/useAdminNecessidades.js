@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-
-// Mock data para simular o comportamento até que o backend seja implementado
-const mockNecessidades = [
-  // Dados vazios por enquanto - será implementado quando o backend estiver pronto
-];
+import { adminApi } from '../services/adminApi';
 
 export function useAdminNecessidades(initial = {}) {
   const [filters, setFilters] = useState({
@@ -25,14 +21,20 @@ export function useAdminNecessidades(initial = {}) {
     setError('');
     
     try {
-      // Simular loading
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Por enquanto, retornar dados vazios
+      const response = await adminApi.necessidades(filters);
+      setItems(response.items || []);
+      setMeta({
+        total: response.total || 0,
+        page: response.page || 1,
+        pageSize: response.pageSize || 20,
+        pages: response.pages || 0
+      });
+    } catch (e) {
+      setError(e?.message || 'Erro ao carregar necessidades');
+      console.error('Erro ao buscar necessidades:', e);
+      // Em caso de erro, manter dados vazios
       setItems([]);
       setMeta({ total: 0, page: 1, pageSize: 20, pages: 0 });
-    } catch (e) {
-      setError(e?.message || 'Erro');
     } finally {
       setLoading(false);
     }
@@ -45,15 +47,23 @@ export function useAdminNecessidades(initial = {}) {
   const setPage = (p) => setFilters((f) => ({ ...f, page: p }));
 
   const updateStatus = async (id, patch) => {
-    // Mock implementation - não faz nada por enquanto
-    console.log('Atualizando necessidade:', id, patch);
-    await fetchList();
+    try {
+      await adminApi.updateNecessidade(id, patch);
+      // Recarrega a lista após atualização
+      await fetchList();
+    } catch (e) {
+      console.error('Erro ao atualizar necessidade:', e);
+      throw e;
+    }
   };
 
   const exportCsv = async () => {
-    // Mock CSV export
-    const csv = 'Nome,Item,Prioridade,Quantidade,Categoria,Status\n';
-    return csv;
+    try {
+      return await adminApi.exportNecessidades();
+    } catch (e) {
+      console.error('Erro ao exportar CSV:', e);
+      throw e;
+    }
   };
 
   return {
