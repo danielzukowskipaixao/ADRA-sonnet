@@ -97,7 +97,7 @@ const LoginCadastro = () => {
           senha: formData.senha
         });
 
-        // Enviar beneficiário para backend (arquivo), sem travar o fluxo se falhar
+        // Enviar beneficiário para backend (arquivo)
         try {
           await api('/api/beneficiaries', {
             method: 'POST',
@@ -109,10 +109,17 @@ const LoginCadastro = () => {
               estado: ''
             }
           });
+          navigate('/espera-validacao');
         } catch (e) {
-          console.warn('Falha ao registrar beneficiário no backend (não bloqueante):', e?.message || e);
+          console.error('Erro ao registrar beneficiário:', e?.message || e);
+          // Se for erro de email duplicado, mostrar mensagem específica
+          if (e?.message && e.message.includes('usuário com esse email')) {
+            setErrors({ email: 'Já existe um usuário com esse email' });
+          } else {
+            setErrors({ submit: 'Erro ao processar cadastro. Tente novamente.' });
+          }
+          return; // Não redirecionar se houve erro
         }
-        navigate('/espera-validacao');
       }
     } catch (error) {
       setErrors({ submit: 'Erro ao processar solicitação. Tente novamente.' });

@@ -158,7 +158,13 @@ app.post('/api/beneficiaries', async (req, res) => {
 
     const all = await readBeneficiaries();
     const byEmailIdx = all.findIndex(b => (b.email || '').toLowerCase() === String(email).toLowerCase());
-    const id = byEmailIdx >= 0 ? all[byEmailIdx].id : (body.id || `${Date.now()}-${Math.random().toString(36).slice(2,8)}`);
+    
+    // Verificar se email já existe - impedir cadastro duplicado
+    if (byEmailIdx >= 0) {
+      return res.status(409).json({ error: 'Já existe um usuário com esse email' });
+    }
+
+    const id = body.id || `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
 
     const record = {
       id,
@@ -168,21 +174,15 @@ app.post('/api/beneficiaries', async (req, res) => {
       address: { city, state },
       document: document || (body.cpf ? { type: 'CPF', value: body.cpf } : undefined),
       status: 'pending',
-      createdAt: byEmailIdx >= 0 ? all[byEmailIdx].createdAt : now,
-      notes: byEmailIdx >= 0 ? all[byEmailIdx].notes : '',
+      createdAt: now,
+      notes: '',
       history: [
-        ...(byEmailIdx >= 0 ? (all[byEmailIdx].history || []) : []),
-        { at: now, by: 'system', action: byEmailIdx >= 0 ? 'update' : 'create', details: '' }
+        { at: now, by: 'system', action: 'create', details: '' }
       ]
     };
 
-    const isNewBeneficiary = byEmailIdx < 0;
-    
-    if (byEmailIdx >= 0) {
-      all[byEmailIdx] = { ...all[byEmailIdx], ...record };
-    } else {
-      all.push(record);
-    }
+    const isNewBeneficiary = true;
+    all.push(record);
     await writeBeneficiaries(all);
     
     // Enviar notificação por email para administradores (apenas para novos cadastros)
