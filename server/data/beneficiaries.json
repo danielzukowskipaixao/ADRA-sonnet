@@ -700,5 +700,62 @@
         "details": ""
       }
     ]
+  },
+  {
+    "id": "1762524611404-6qmkqu",
+    "name": "Emanuel1",
+    "email": "emanuel2@gmail.com",
+    "phone": "26785340186",
+    "address": {
+      "city": "",
+      "state": ""
+    },
+    "status": "validated",
+    "createdAt": "2025-11-07T14:10:11.401Z",
+    "notes": "",
+    "history": [
+      {
+        "at": "2025-11-07T14:10:11.401Z",
+        "by": "system",
+        "action": "create",
+        "details": ""
+      },
+      {
+        "at": "2025-11-07T14:10:27.920Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-11-07T14:10:28.119Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-11-07T14:10:28.301Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-11-07T14:10:28.493Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-11-07T14:10:30.926Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      },
+      {
+        "at": "2025-11-07T14:10:31.110Z",
+        "by": "admin",
+        "action": "validated",
+        "details": ""
+      }
+    ]
   }
 ]

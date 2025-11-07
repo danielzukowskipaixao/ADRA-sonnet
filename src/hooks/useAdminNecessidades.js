@@ -57,6 +57,17 @@ export function useAdminNecessidades(initial = {}) {
     }
   };
 
+  const deleteNecessidade = async (id) => {
+    try {
+      await adminApi.deleteNecessidade(id);
+      // Recarrega a lista após exclusão
+      await fetchList();
+    } catch (e) {
+      console.error('Erro ao excluir necessidade:', e);
+      throw e;
+    }
+  };
+
   const exportCsv = async () => {
     try {
       return await adminApi.exportNecessidades();
@@ -79,6 +90,7 @@ export function useAdminNecessidades(initial = {}) {
     setFilters,
     setPage,
     updateStatus,
+    deleteNecessidade,
     exportCsv,
   };
 }

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import Button from '../Button';
 
-function RowActions({ id, onUpdate }) {
+function RowActions({ id, onUpdate, onDelete }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState('');
   const [obs, setObs] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const submit = async () => {
     const patch = {};
@@ -15,6 +16,16 @@ function RowActions({ id, onUpdate }) {
     setOpen(false);
     setStatus('');
     setObs('');
+  };
+
+  const handleDelete = async () => {
+    try {
+      await onDelete(id);
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error('Erro ao excluir:', error);
+      alert('Erro ao excluir a necessidade');
+    }
   };
 
   return (
@@ -34,21 +45,40 @@ function RowActions({ id, onUpdate }) {
             <option value="em_analise">Em análise</option>
             <option value="parcial">Parcial</option>
             <option value="atendida">Atendida</option>
+            <option value="excluir" className="text-red-600">Excluir conta</option>
           </select>
-          <input 
-            className="border rounded px-2 py-1 text-sm" 
-            placeholder="Observação interna" 
-            value={obs} 
-            onChange={(e) => setObs(e.target.value)} 
-          />
-          <Button size="sm" onClick={submit}>Salvar</Button>
+          {status !== 'excluir' && (
+            <input 
+              className="border rounded px-2 py-1 text-sm" 
+              placeholder="Observação interna" 
+              value={obs} 
+              onChange={(e) => setObs(e.target.value)} 
+            />
+          )}
+          {status === 'excluir' ? (
+            <div className="flex items-center gap-2">
+              <span className="text-red-600 text-sm">Confirmar exclusão?</span>
+              <Button size="sm" variant="secondary" onClick={() => setStatus('')}>
+                Cancelar
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={handleDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Excluir
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" onClick={submit}>Salvar</Button>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-export default function NecessidadesTable({ items = [], total = 0, page = 1, pages = 0, onPrev, onNext, onUpdate }) {
+export default function NecessidadesTable({ items = [], total = 0, page = 1, pages = 0, onPrev, onNext, onUpdate, onDelete }) {
   const isEmpty = !items || items.length === 0;
   
   if (isEmpty) {
@@ -102,7 +132,7 @@ export default function NecessidadesTable({ items = [], total = 0, page = 1, pag
                 <td className="px-3 py-2 text-sm">{n.status}</td>
                 <td className="px-3 py-2 text-sm">{n.criadoEm?.slice(0, 10)}</td>
                 <td className="px-3 py-2 text-sm text-right">
-                  <RowActions id={n.id} onUpdate={onUpdate} />
+                  <RowActions id={n.id} onUpdate={onUpdate} onDelete={onDelete} />
                 </td>
               </tr>
             ))}

@@ -51,6 +51,9 @@ export const adminApi = {
   updateNecessidade(id, body) {
     return fetch(`${API}/necessidades/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' }).then(json);
   },
+  deleteNecessidade(id) {
+    return fetch(`${API}/necessidades/${id}`, { method: 'DELETE', credentials: 'include' }).then(json);
+  },
   exportNecessidades() {
     return fetch(`${API}/necessidades/export.csv`, { credentials: 'include' }).then(r => r.text());
   }

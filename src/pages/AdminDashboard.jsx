@@ -197,6 +197,7 @@ export default function AdminDashboard() {
               onPrev={() => necessidades.setPage(Math.max(1, necessidades.page - 1))}
               onNext={() => necessidades.setPage(Math.min(necessidades.pages, necessidades.page + 1))}
               onUpdate={(id, patch) => necessidades.updateStatus(id, patch)}
+              onDelete={(id) => necessidades.deleteNecessidade(id)}
             />
           </>
         ) : (

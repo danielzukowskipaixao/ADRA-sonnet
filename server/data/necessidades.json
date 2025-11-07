@@ -36,65 +36,39 @@
     }
   },
   {
-    "id": "1761846508118-0-220any",
-    "userId": 3,
-    "necessitadoNome": "Emanuel Prado",
+    "id": "1762524719229-0-5z80uc",
+    "userId": 4,
+    "necessitadoNome": "Emanuel1",
     "necessitadoContato": {
-      "email": "emanuel@gmail.com",
-      "telefone": "16384973425"
+      "email": "emanuel2@gmail.com",
+      "telefone": "26785340186"
     },
-    "item": "Mamão",
+    "item": "Arroz",
     "categoria": "Alimentos",
-    "quantidade": 1000,
-    "unidade": "kg",
-    "descricao": "extra grande",
-    "prioridade": "urgente",
+    "quantidade": 10,
+    "unidade": "Kg",
+    "descricao": "pouco em casa",
+    "prioridade": "alta",
     "enderecoEntrega": {
       "tipo": "endereco",
-      "cep": "63547-839",
-      "logradouro": "Alagoinha",
-      "numero": "158",
+      "cep": "26374-859",
+      "logradouro": "Mario",
+      "numero": "413",
       "complemento": "",
-      "bairro": "FDP",
-      "cidade": "PQP",
-      "uf": "DF",
-      "endereco": "Alagoinha, 158, FDP"
+      "bairro": "Itamarati",
+      "cidade": "Artur Nogueira",
+      "uf": "SP",
+      "endereco": "Mario, 413, Itamarati"
     },
-    "status": "atendida",
+    "status": "pendente",
     "observacaoInterna": "",
-    "criadoEm": "2025-10-30T17:48:28.118Z",
-    "atualizadoEm": "2025-10-30T17:55:34.599Z",
+    "criadoEm": "2025-11-07T14:11:59.229Z",
+    "atualizadoEm": "2025-11-07T14:11:59.229Z",
     "termsAccepted": true,
     "originalRequest": {
-      "urgency": "urgente",
-      "description": "estou morrendo",
-      "submittedAt": "2025-10-30T17:48:28.118Z"
-    },
-    "historicoStatus": [
-      {
-        "at": "2025-10-30T17:55:19.361Z",
-        "by": "admin",
-        "status": "atendida",
-        "observacao": ""
-      },
-      {
-        "at": "2025-10-30T17:55:26.399Z",
-        "by": "admin",
-        "status": "pendente",
-        "observacao": ""
-      },
-      {
-        "at": "2025-10-30T17:55:30.664Z",
-        "by": "admin",
-        "status": "parcial",
-        "observacao": ""
-      },
-      {
-        "at": "2025-10-30T17:55:34.599Z",
-        "by": "admin",
-        "status": "atendida",
-        "observacao": ""
-      }
-    ]
+      "urgency": "alta",
+      "description": "pouco em casa",
+      "submittedAt": "2025-11-07T14:11:59.229Z"
+    }
   }
 ]

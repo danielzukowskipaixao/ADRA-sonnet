@@ -367,6 +367,23 @@ router.patch('/necessidades/:id', async (req, res) => {
   }
 });
 
+router.delete('/necessidades/:id', async (req, res) => {
+  try {
+    const all = await readJson(necessidadesFile);
+    const idx = all.findIndex(x => x.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Necessidade não encontrada' });
+    
+    // Remove a necessidade do array
+    all.splice(idx, 1);
+    
+    await writeJson(necessidadesFile, all);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[admin] Erro ao excluir necessidade', e);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
 // Export CSV
 router.get('/necessidades/export.csv', async (req, res) => {
   try {
